@@ -1,6 +1,7 @@
 import os
 import sqlite3
-DB_NAME = "database.db"
+from zoneinfo import ZoneInfo
+os.makedirs(UPLOADS, exist_ok=True)
 from datetime import datetime, timedelta, time
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -12,11 +13,13 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_URL = os.environ.get("DATABASE_URL")
-print("DATABASE_URL =", DATABASE_URL)
-UPLOADS = os.path.join(APP_DIR, 'uploads')
-BASE_XLSX = os.path.join(APP_DIR, 'base.xlsx')
-TZ = ZoneInfo('America/Lima')
+
+DB_PATH = os.path.join(APP_DIR, "database.db")
+
+UPLOADS = os.path.join(APP_DIR, "uploads")
+BASE_XLSX = os.path.join(APP_DIR, "base.xlsx")
+TZ = ZoneInfo("America/Lima")
+
 os.makedirs(UPLOADS, exist_ok=True)
 
 app = Flask(__name__)
