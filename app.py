@@ -12,7 +12,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-DB = os.path.join(APP_DIR, 'database.db')
+DATABASE_URL = os.environ.get("DATABASE_URL")
 UPLOADS = os.path.join(APP_DIR, 'uploads')
 BASE_XLSX = os.path.join(APP_DIR, 'base.xlsx')
 TZ = ZoneInfo('America/Lima')
@@ -31,8 +31,7 @@ AREAS = ('SAE', 'VENTAS')
 
 
 def conn():
-    c = sqlite3.connect(DB)
-    c.row_factory = sqlite3.Row
+    c = psycopg2.connect(DATABASE_URL)
     return c
 
 
