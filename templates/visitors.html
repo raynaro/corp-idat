@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card visitsPanel" data-sonido="{{ '1' if sonido_area else '0' }}" data-ultimo="{{ ultimo_id or 0 }}" data-area="{{ area_actual or '' }}">
+  <div class="top">
+    <div>
+      <h2>{% if session.get('role')=='sae' %}Apartado SAE{% elif session.get('role')=='sales' %}Apartado Ventas{% else %}Visitas nuevas{% endif %}</h2>
+      <p>
+        {% if session.get('role')=='sae' %}Personas que pasan al área SAE, enumeradas por orden de llegada. Marca al costado si fue atendido o no.
+        {% elif session.get('role')=='sales' %}Personas que pasan al área Ventas, enumeradas por orden de llegada. Marca al costado si fue atendido o no.
+        {% else %}Registro de visitas con horario Lima/Perú.
+        {% endif %}
+      </p>
+    </div>
+    <div class="actions">
+      {% if sonido_area %}
+        <button type="button" class="btn soundBtn" id="toggleSonido">🔔 Activar sonido</button>
+        <button type="button" class="btn muteBtn" id="silenciarSonido">🔕 Silenciar</button>
+      {% endif %}
+      <a class="btn" href="{{url_for('new_visitor')}}">+ Nueva visita</a>
+      {% if session.get('role') in ['admin','sae','sales'] %}<a class="btn secondary" href="{{url_for('export_visits_excel')}}">Exportar Excel</a>{% endif %}
+    </div>
+  </div>
+
+  {% if sonido_area %}
+  <div class="noticeSound" id="estadoSonido">
+    🔕 Sonido apagado. Presiona “Activar sonido” una vez. Después sonará automáticamente 3 segundos por cada nueva visita a {{area_actual}}.
+  </div>
+  <div class="alarmBox" id="alarmBox" style="display:none;">
+    🚨 NUEVA VISITA PARA {{area_actual}} 🚨
+    <small>La campanita sonará durante 3 segundos por cada persona registrada para esta área.</small>
+  </div>
+  {% endif %}
+
+  <div class="statusLegend">
+    <span><i class="dot dotNew"></i> Recién llegado</span>
+    <span><i class="dot dotPending"></i> No atendido</span>
+    <span><i class="dot dotDone"></i> Atendido</span>
+  </div>
+
+  <table class="visitsTable">
+    <tr>
+      <th>N°</th><th>Fecha Lima</th><th>Registró</th><th>Nombres completos</th><th>DNI</th><th>Área</th><th>Motivo</th>
+      {% if session.get('role') in ['admin','sae','sales'] %}<th>Atención</th>{% endif %}
+    </tr>
+    {% for v in visitors %}
+    <tr class="visitRow {% if not v.attended %}pendingVisit{% else %}doneVisit{% endif %}" data-created="{{v.created_at}}" data-attended="{{1 if v.attended else 0}}">
+      <td><span class="orderBadge">{{ loop.index }}</span></td>
+      <td>{{v.created_at}}</td>
+      <td>{{v.user}}</td>
+      <td><b>{{v.full_name}}</b></td>
+      <td>{{v.dni}}</td>
+      <td><span class="badge area">{{v.destination_area}}</span></td>
+      <td>{{v.reason or ''}}</td>
+      {% if session.get('role') in ['admin','sae','sales'] %}
+      <td>
+        <form method="post" action="{{ url_for('update_visit_status', visit_id=v.id) }}" class="statusForm">
+          <select name="estado" class="estadoSelect {% if v.attended %}estadoOk{% else %}estadoPendiente{% endif %}" onchange="this.form.submit()">
+            <option value="0" {% if not v.attended %}selected{% endif %}>No atendido</option>
+            <option value="1" {% if v.attended %}selected{% endif %}>Atendido</option>
+          </select>
+        </form>
+        {% if v.attended_at %}<small class="attendedAt">{{v.attended_at}}</small>{% endif %}
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+
+{% if sonido_area %}
+<script>
+(function(){
+  const panel = document.querySelector('.visitsPanel');
+  const btn = document.getElementById('toggleSonido');
+  const muteBtn = document.getElementById('silenciarSonido');
+  const estado = document.getElementById('estadoSonido');
+  const alarmBox = document.getElementById('alarmBox');
+  const area = panel.dataset.area || 'esta área';
+  const storageKey = 'idat_sonido_' + area;
+  let ultimo = Number(panel.dataset.ultimo || 0);
+  let sonidoActivo = localStorage.getItem(storageKey) === '1';
+  let audioCtx = null;
+  let colaSonidos = 0;
+  let reproduciendo = false;
+  let temporizador = null;
+
+  function prepararAudio(){
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  async function asegurarAudio(){
+    const ctx = prepararAudio();
+    if(ctx.state === 'suspended') await ctx.resume();
+    return ctx;
+  }
+
+  function tono(ctx, frecuencia, inicio, duracion, volumen){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(frecuencia, ctx.currentTime + inicio);
+    gain.gain.setValueAtTime(0.001, ctx.currentTime + inicio);
+    gain.gain.exponentialRampToValueAtTime(volumen, ctx.currentTime + inicio + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + inicio);
+    osc.stop(ctx.currentTime + inicio + duracion + 0.03);
+  }
+
+  async function campanitaLlamativa(){
+    if(!sonidoActivo) return;
+    const ctx = await asegurarAudio();
+    tono(ctx, 1568, 0.00, 0.25, 0.55);
+    tono(ctx, 2093, 0.18, 0.32, 0.48);
+    tono(ctx, 1318, 0.42, 0.30, 0.42);
+    tono(ctx, 2349, 0.70, 0.38, 0.38);
+  }
+
+  function actualizarEstado(){
+    if(sonidoActivo){
+      btn.textContent = '🔔 Sonido activado';
+      estado.textContent = '🔔 Sonido activado. Sonará automáticamente 3 segundos por cada visita nueva para ' + area + '.';
+    }else{
+      btn.textContent = '🔔 Activar sonido';
+      estado.textContent = '🔕 Sonido apagado. Presiona “Activar sonido” para recibir avisos de ' + area + '.';
+    }
+  }
+
+  async function activarSonido(){
+    sonidoActivo = true;
+    localStorage.setItem(storageKey, '1');
+    actualizarEstado();
+    await campanitaLlamativa();
+  }
+
+  function silenciarTodo(){
+    sonidoActivo = false;
+    colaSonidos = 0;
+    reproduciendo = false;
+    if(temporizador){ clearInterval(temporizador); temporizador = null; }
+    localStorage.setItem(storageKey, '0');
+    alarmBox.style.display = 'none';
+    actualizarEstado();
+  }
+
+  async function sonarTresSegundos(){
+    if(!sonidoActivo) return;
+    alarmBox.style.display = 'block';
+    const fin = Date.now() + 3000;
+    await campanitaLlamativa();
+    temporizador = setInterval(async function(){
+      if(Date.now() >= fin){
+        clearInterval(temporizador);
+        temporizador = null;
+        colaSonidos = Math.max(0, colaSonidos - 1);
+        if(colaSonidos > 0 && sonidoActivo){
+          sonarTresSegundos();
+        }else{
+          reproduciendo = false;
+          alarmBox.style.display = 'none';
+        }
+      }else{
+        await campanitaLlamativa();
+      }
+    }, 750);
+  }
+
+  function agregarSonidos(cantidad){
+    if(!sonidoActivo || cantidad <= 0) return;
+    colaSonidos += cantidad;
+    if(!reproduciendo){
+      reproduciendo = true;
+      sonarTresSegundos();
+    }
+  }
+
+  btn.addEventListener('click', activarSonido);
+  muteBtn.addEventListener('click', silenciarTodo);
+  actualizarEstado();
+
+  async function revisar(){
+    try{
+      const res = await fetch('{{ url_for('visitas_estado') }}?since=' + ultimo, {cache:'no-store'});
+      const data = await res.json();
+      const nuevoUltimo = Number(data.ultimo || 0);
+      const nuevos = Number(data.nuevos || 0);
+      if(nuevoUltimo > ultimo){
+        ultimo = nuevoUltimo;
+        agregarSonidos(nuevos);
+        setTimeout(function(){ window.location.reload(); }, 1200);
+      }
+    }catch(e){ console.log(e); }
+  }
+
+  setInterval(revisar, 3000);
+  revisar();
+})();
+</script>
+{% endif %}
+<script>
+(function(){
+  function marcarRecientes(){
+    const ahora = Date.now();
+    document.querySelectorAll('.visitRow').forEach(function(row){
+      if(row.dataset.attended === '1') return;
+      const creado = Date.parse(row.dataset.created || '');
+      if(!isNaN(creado) && (ahora - creado) <= 10 * 60 * 1000){
+        row.classList.add('newVisit');
+      }
+    });
+  }
+  marcarRecientes();
+})();
+</script>
+{% endblock %}

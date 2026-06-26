@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card consult scanMode">
+  <h2>Consulta y Registro de Entrada</h2>
+  <p>Busca por DNI o Código del alumno. La barra queda lista para seguir registrando sin borrar la búsqueda anterior.</p>
+
+  <form method="post" class="search continuousSearch" id="studentSearchForm">
+    <input id="studentSearchInput" name="q" value="" placeholder="DNI o Código" required autofocus autocomplete="off" inputmode="numeric">
+    <input name="note" value="" placeholder="Observación opcional" autocomplete="off">
+    <button>🔎 Consultar y registrar</button>
+  </form>
+
+  {% if q %}
+    <div class="lastSearch">Última búsqueda: <b>{{q}}</b></div>
+    {% if result and result.active %}
+      <div class="result ok"><div class="avatar">👤</div><div><span class="badge activo">ACTIVO</span><h3>{{result.name}}</h3><p>DNI <b>{{result.dni}}</b> &nbsp; Código <b>{{result.code}}</b></p></div><small>Entrada registrada correctamente.</small></div>
+    {% else %}
+      <div class="result bad"><div class="avatar red">👤</div><div><span class="badge inactivo">INACTIVO</span><h3>Sin acceso activo</h3><p>No está en la base activa. La consulta igual quedó registrada.</p></div><small>Revisar DNI o código.</small></div>
+    {% endif %}
+  {% endif %}
+</section>
+<script>
+(function(){
+  const input = document.getElementById('studentSearchInput');
+  if(input){
+    input.focus();
+    input.select();
+  }
+})();
+</script>
+{% endblock %}

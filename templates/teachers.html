@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card teacherImportHero">
+  <div class="top">
+    <div>
+      <span class="heroLabel">🏫 BASE DOCENTE</span>
+      <h2>Apartado docente</h2>
+      <p>Importa, actualiza y consulta docentes. Si un docente no está en el Excel nuevo, queda como <b>INACTIVO</b>.</p>
+    </div>
+    <a class="btn" href="{{url_for('teacher_check')}}">Registrar ingreso docente</a>
+  </div>
+
+  {% if session.get('role')=='admin' %}
+  <div class="importBox">
+    <div>
+      <h3>📥 Importar base de docentes</h3>
+      <p>El Excel debe tener como mínimo: <b>NombreCompleto</b> y <b>DNI</b>. La columna <b>Área</b>, <b>Especialidad</b> o <b>Curso</b> es opcional.</p>
+    </div>
+    <form method="post" action="{{url_for('import_teachers')}}" enctype="multipart/form-data" class="search importForm">
+      <input type="file" name="file" accept=".xlsx,.xlsm" required>
+      <button>Importar docentes</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <form class="search">
+    <input name="q" value="{{q}}" placeholder="Buscar docente por nombre, DNI o área">
+    <button>Buscar</button>
+  </form>
+
+  <table>
+    <tr><th>#</th><th>Nombre</th><th>DNI</th><th>Área</th><th>Estado</th></tr>
+    {% for t in teachers %}
+    <tr>
+      <td>{{loop.index}}</td>
+      <td><b>{{t.name}}</b></td>
+      <td>{{t.dni}}</td>
+      <td>{{t.area or '-'}}</td>
+      <td><span class="badge {{'activo' if t.active else 'inactivo'}}">{{'ACTIVO' if t.active else 'INACTIVO'}}</span></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="emptyCell">No hay docentes registrados todavía.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

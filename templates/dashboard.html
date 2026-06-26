@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block content %}
+<header class="top adminHero proHero">
+  <div>
+    <span class="heroLabel">📊 PANEL ADMINISTRADOR</span>
+    <h1>Control general IDAT</h1>
+    <p>Gráficos, flujos semanales y seguimiento de SAE, Ventas y Seguridad · Lima/Perú: <b>{{lima_now}}</b></p>
+  </div>
+  <div class="heroButtons">
+    <a class="btn lightBtn" href="#graficos">Ver gráficos</a>
+    <a class="btn lightBtn" href="#ingresos-activos">Ingresos activos de hoy</a>
+    <a class="btn lightBtn dangerLight" href="{{url_for('logout')}}">Cerrar sesión</a>
+  </div>
+</header>
+
+<section class="grid4 adminStats">
+  <div class="stat kpi">👥<b>{{stats.active}}</b><span>Alumnos activos</span></div>
+  <div class="stat kpi">🏫<b>{{stats.teachers}}</b><span>Docentes activos</span></div>
+  <div class="stat kpi">🚶<b>{{stats.visitors}}</b><span>Visitas hoy</span></div>
+  <div class="stat kpi dangerKpi">⏳<b>{{stats.pending}}</b><span>No atendidas</span></div>
+</section>
+
+<section class="grid4 adminStats dailyAccess" id="ingresos-activos">
+  <div class="stat kpi todayStudent">🎓<b>{{stats.students_active_today}}</b><span>Alumnos activos que ingresaron hoy</span></div>
+  <div class="stat kpi todayTeacher">🏫<b>{{stats.teachers_active_today}}</b><span>Docentes activos que ingresaron hoy</span></div>
+  <div class="stat kpi">✅<b>{{stats.attended}}</b><span>Visitas atendidas</span></div>
+  <div class="stat kpi">📅<b>{{stats.visitors_week}}</b><span>Visitas de la semana</span></div>
+</section>
+
+
+<section class="layout adminLayout activeTodayPanel">
+  <div class="card professionalTable">
+    <div class="sectionHead"><h3>🎓 Alumnos activos que ingresaron hoy</h3><span>Registro diario</span></div>
+    <table>
+      <tr><th>Hora Lima</th><th>Registró</th><th>Alumno</th><th>DNI / Código</th><th>Estado</th></tr>
+      {% for r in active_students_today %}
+      <tr>
+        <td>{{r.created_at[11:16]}}</td>
+        <td>{{r.user}}</td>
+        <td><b>{{r.student_name or 'No encontrado'}}</b></td>
+        <td>{{r.student_dni or r.query}} / {{r.student_code or '-'}}</td>
+        <td><span class="badge activo">ACTIVO</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="emptyCell">Aún no hay alumnos activos registrados hoy.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="card professionalTable">
+    <div class="sectionHead"><h3>🏫 Docentes activos que ingresaron hoy</h3><span>Registro diario</span></div>
+    <table>
+      <tr><th>Hora Lima</th><th>Registró</th><th>Docente</th><th>DNI / Área</th><th>Estado</th></tr>
+      {% for t in active_teachers_today %}
+      <tr>
+        <td>{{t.created_at[11:16]}}</td>
+        <td>{{t.user}}</td>
+        <td><b>{{t.teacher_name or 'No encontrado'}}</b></td>
+        <td>{{t.teacher_dni or t.query}} / {{t.teacher_area or '-'}}</td>
+        <td><span class="badge activo">ACTIVO</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="emptyCell">Aún no hay docentes activos registrados hoy.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</section>
+
+<section class="layout adminLayout" id="graficos">
+  <div class="card chartCard statLineCard">
+    <div class="sectionHead">
+      <h3>📈 Gráfico estadístico de líneas</h3>
+      <span>Flujo semanal: total, SAE y Ventas</span>
+    </div>
+    <div class="lineLegend">
+      <span><i class="lineTotal"></i>Total</span>
+      <span><i class="lineSae"></i>SAE</span>
+      <span><i class="lineVentas"></i>Ventas</span>
+    </div>
+    <div class="lineChartWrap">
+      <svg class="lineChart" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Gráfico de líneas semanal">
+        <line x1="0" y1="92" x2="100" y2="92" class="axisLine"/>
+        <line x1="0" y1="66" x2="100" y2="66" class="gridLine"/>
+        <line x1="0" y1="40" x2="100" y2="40" class="gridLine"/>
+        <line x1="0" y1="14" x2="100" y2="14" class="gridLine"/>
+        <polyline points="{{line_points_total}}" class="chartLine total"/>
+        <polyline points="{{line_points_sae}}" class="chartLine sae"/>
+        <polyline points="{{line_points_ventas}}" class="chartLine ventas"/>
+        {% for d in weekly %}
+        <circle cx="{{d.x}}" cy="{{d.y_total}}" r="1.6" class="dotTotal"/>
+        <circle cx="{{d.x}}" cy="{{d.y_sae}}" r="1.2" class="dotSae"/>
+        <circle cx="{{d.x}}" cy="{{d.y_ventas}}" r="1.2" class="dotVentas"/>
+        {% endfor %}
+      </svg>
+    </div>
+    <div class="lineLabels">
+      {% for d in weekly %}
+      <span><b>{{d.total}}</b><small>{{d.dia}}</small></span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card chartCard statBarCard">
+    <div class="sectionHead">
+      <h3>📊 Diagrama de barras por área</h3>
+      <span>Total, atendidos y pendientes</span>
+    </div>
+    <div class="horizontalBars">
+      {% for a in area_bars %}
+      <div class="hBarItem">
+        <div class="hBarTop"><b>{{a.area}}</b><strong>{{a.total}}</strong></div>
+        <div class="hBarTrack"><div class="hBarFill" style="width: {{a.pct if a.pct > 0 else 2}}%"></div></div>
+        <div class="stackTrack">
+          <span class="stackOk" style="width: {{a.pct_atendidos}}%"></span>
+          <span class="stackPending" style="width: {{a.pct_pendientes}}%"></span>
+        </div>
+        <small>✅ {{a.atendidos}} atendidos · ⏳ {{a.pendientes}} pendientes</small>
+      </div>
+      {% else %}
+      <p class="emptyCell">Aún no hay visitas para graficar.</p>
+      {% endfor %}
+    </div>
+    <hr>
+    <h3>Acciones rápidas</h3>
+    <a href="{{url_for('new_visitor')}}">📝 Registrar persona nueva ›</a>
+    <a href="{{url_for('teachers')}}">🏫 Apartado docente e importar docentes ›</a>
+    <a href="{{url_for('export_visits_excel')}}">📊 Reporte semanal visitas ›</a>
+    <a href="{{url_for('register')}}">👤 Crear usuario ›</a>
+  </div>
+</section>
+
+<section class="card" id="detalle-usuarios">
+  <div class="sectionHead"><h3>Todo lo que hacen los usuarios</h3><span>SAE · Ventas · Seguridad</span></div>
+  <table>
+    <tr><th>Usuario</th><th>Rol</th><th>Alumnos</th><th>Docentes</th><th>Visitas registradas</th><th>Total acciones</th></tr>
+    {% for u in user_activity %}
+    <tr>
+      <td><b>{{u.name}}</b></td>
+      <td>{{roles.get(u.role, u.role)}}</td>
+      <td>{{u.alumnos}}</td><td>{{u.docentes}}</td><td>{{u.visitas}}</td><td><b>{{u.total}}</b></td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="layout adminLayout">
+  <div class="card">
+    <div class="sectionHead"><h3>Últimas visitas SAE</h3><span>Área SAE</span></div>
+    <table><tr><th>Fecha</th><th>Registró</th><th>Persona</th><th>Estado</th></tr>
+    {% for v in sae_detail %}<tr><td>{{v.created_at}}</td><td>{{v.user}}</td><td><b>{{v.full_name}}</b></td><td>{% if v.attended %}<span class="badge activo">ATENDIDO</span>{% else %}<span class="badge inactivo">NO ATENDIDO</span>{% endif %}</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="card">
+    <div class="sectionHead"><h3>Últimas visitas Ventas</h3><span>Área Ventas</span></div>
+    <table><tr><th>Fecha</th><th>Registró</th><th>Persona</th><th>Estado</th></tr>
+    {% for v in sales_detail %}<tr><td>{{v.created_at}}</td><td>{{v.user}}</td><td><b>{{v.full_name}}</b></td><td>{% if v.attended %}<span class="badge activo">ATENDIDO</span>{% else %}<span class="badge inactivo">NO ATENDIDO</span>{% endif %}</td></tr>{% endfor %}
+    </table>
+  </div>
+</section>
+
+<section class="layout adminLayout">
+  <div class="card">
+    <div class="sectionHead"><h3>Registros hechos por Seguridad</h3><span>Recepción</span></div>
+    <table><tr><th>Fecha</th><th>Seguridad</th><th>Persona</th><th>Área</th></tr>
+    {% for v in security_detail %}<tr><td>{{v.created_at}}</td><td>{{v.user}}</td><td><b>{{v.full_name}}</b></td><td><span class="badge area">{{v.destination_area}}</span></td></tr>{% endfor %}
+    </table>
+  </div>
+
+  <div class="card" id="importar">
+    <h3>Importar base de alumnos</h3>
+    <p>Columnas: NombreCompleto, DNI y Codigo. Los que no estén en el Excel quedan INACTIVOS.</p>
+    <form method="post" action="{{url_for('import_excel')}}" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".xlsx,.xlsm" required>
+      <button>Importar alumnos</button>
+    </form>
+    <hr>
+    <h3>Importar base de docentes</h3>
+    <p>Columnas mínimas: NombreCompleto y DNI. Área/Especialidad es opcional.</p>
+    <form method="post" action="{{url_for('import_teachers')}}" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".xlsx,.xlsm" required>
+      <button>Importar docentes</button>
+    </form>
+    <hr>
+    <div class="miniStats">
+      <div><b>{{stats.attended}}</b><span>Atendidas</span></div>
+      <div><b>{{stats.inactive}}</b><span>Intentos inactivos</span></div>
+      <div><b>{{stats.users}}</b><span>Usuarios</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="layout adminLayout">
+  <div class="card">
+    <div class="sectionHead"><h3>Últimos registros de docentes</h3><span>Seguridad</span></div>
+    <table><tr><th>Fecha Lima</th><th>Usuario</th><th>Docente</th><th>Resultado</th></tr>{% for t in recent_teachers %}<tr><td>{{t.created_at}}</td><td>{{t.user}}</td><td>{{t.teacher_name or t.query}}</td><td><span class="badge {{t.result|lower}}">{{t.result}}</span></td></tr>{% endfor %}</table>
+  </div>
+  <div class="card">
+    <div class="sectionHead"><h3>Últimos registros de alumnos</h3><span>Control general</span></div>
+    <table><tr><th>Fecha</th><th>Usuario</th><th>Consulta</th><th>Resultado</th></tr>{% for r in recent %}<tr><td>{{r.created_at}}</td><td>{{r.user}}</td><td>{{r.query}}</td><td><span class="badge {{r.result|lower}}">{{r.result}}</span></td></tr>{% endfor %}</table>
+  </div>
+</section>
+{% endblock %}

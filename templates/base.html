@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sistema IDAT</title>
+  <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+</head>
+<body>
+{% if session.get('user_id') %}
+<aside class="sidebar">
+  <div class="brand">⚡ idat</div>
+  <p class="userBox">{{session.get('name')}}<br><small>{{roles.get(session.get('role'), session.get('role'))}}</small></p>
+  {% if session.get('role')=='admin' %}
+    <a class="navPrimary" href="{{url_for('dashboard')}}">📊 Panel</a>
+    <a href="{{url_for('users')}}">👤 Usuarios</a>
+    <a href="{{url_for('dashboard')}}#detalle-usuarios">🧾 SAE / Ventas / Seguridad</a>
+    <a href="{{url_for('dashboard')}}#importar">⬆ Importar base</a>
+    <a href="{{url_for('export_excel')}}">📄 Exportar registros</a>
+  {% endif %}
+  {% if session.get('role')=='security' %}<a class="navPrimary" href="{{url_for('security_panel')}}">🛡 Panel seguridad</a>{% endif %}
+  <a href="{{url_for('consulta')}}">🔎 Registrar alumno</a>
+  {% if session.get('role')=='security' %}<a href="{{url_for('teacher_check')}}">🏫 Registrar docente</a>{% endif %}
+  <a href="{{url_for('new_visitor')}}">📝 Registrar visita</a>
+  <a href="{{url_for('visitors')}}">🚶 Visitas</a>
+  {% if session.get('role') in ['admin','sae'] %}<a href="{{url_for('students')}}">👥 Alumnos</a><a href="{{url_for('teachers')}}">🏫 Docentes</a>{% endif %}
+  {% if session.get('role') in ['admin','sae','sales'] %}<a href="{{url_for('export_visits_excel')}}">📊 Reporte visitas</a>{% endif %}
+  <a class="logout" href="{{url_for('logout')}}">↩ Cerrar sesión</a>
+</aside>
+{% endif %}
+<main class="main {% if not session.get('user_id') %}full{% endif %}">
+  {% with msgs=get_flashed_messages(with_categories=true) %}{% for cat,msg in msgs %}<div class="alert {{cat}}">{{msg}}</div>{% endfor %}{% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

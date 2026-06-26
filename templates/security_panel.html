@@ -1,0 +1,36 @@
+{% extends 'base.html' %}{% block content %}
+<header class="top securityTop easyHero">
+  <div>
+    <h1>Panel de Seguridad</h1>
+    <p>Todo rápido para PC y celular · Hora Lima/Perú: <b>{{stats.lima_now}}</b></p>
+  </div>
+  <span class="date">🛡️ Modo recepción</span>
+</header>
+
+<section class="securityActions">
+  <a class="actionBig alumno" href="{{url_for('consulta')}}"><span>🎓</span><b>Alumno</b><small>Registrar ingreso por DNI o código</small></a>
+  <a class="actionBig docente" href="{{url_for('teacher_check')}}"><span>🏫</span><b>Docente</b><small>Registrar ingreso por DNI</small></a>
+  <a class="actionBig sae" href="{{url_for('new_visitor', area='SAE')}}"><span>📋</span><b>Visita SAE</b><small>Enviar alerta al área SAE</small></a>
+  <a class="actionBig ventas" href="{{url_for('new_visitor', area='VENTAS')}}"><span>💼</span><b>Visita Ventas</b><small>Enviar alerta a Ventas</small></a>
+</section>
+
+<section class="grid4 compactStats">
+  <div class="stat">🎓<b>{{stats.students_today}}</b><span>Alumnos hoy</span></div>
+  <div class="stat">🏫<b>{{stats.teachers_today}}</b><span>Docentes hoy</span></div>
+  <div class="stat">🚶<b>{{stats.visits_today}}</b><span>Visitas hoy</span></div>
+  <div class="stat">✅<b>4</b><span>Funciones rápidas</span></div>
+</section>
+
+<section class="layout securityLayout">
+  <div class="card mobileCard">
+    <div class="sectionHead"><h3>Últimos alumnos</h3><span>Control</span></div>
+    <table><tr><th>Hora</th><th>Consulta</th><th>Alumno</th><th>Estado</th></tr>{% for r in recent_students %}<tr><td>{{r.created_at}}</td><td>{{r.query}}</td><td>{{r.student_name or '-'}}</td><td><span class="badge {{r.result|lower}}">{{r.result}}</span></td></tr>{% endfor %}</table>
+  </div>
+  <div class="card mobileCard">
+    <div class="sectionHead"><h3>Últimos docentes</h3><span>Docente</span></div>
+    <table><tr><th>Hora</th><th>DNI</th><th>Docente</th><th>Estado</th></tr>{% for r in recent_teachers %}<tr><td>{{r.created_at}}</td><td>{{r.query}}</td><td>{{r.teacher_name or '-'}}</td><td><span class="badge {{r.result|lower}}">{{r.result}}</span></td></tr>{% endfor %}</table>
+  </div>
+</section>
+
+<section class="card mobileCard"><div class="sectionHead"><h3>Últimas visitas</h3><span>SAE / Ventas</span></div><table><tr><th>Hora</th><th>Nombre</th><th>DNI</th><th>Área</th><th>Motivo</th></tr>{% for v in recent_visits %}<tr><td>{{v.created_at}}</td><td><b>{{v.full_name}}</b></td><td>{{v.dni}}</td><td><span class="badge area">{{v.destination_area}}</span></td><td>{{v.reason or ''}}</td></tr>{% endfor %}</table></section>
+{% endblock %}

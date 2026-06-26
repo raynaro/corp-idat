@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card consult scanMode">
+  <h2>Registro de docente</h2>
+  <p>Busca por DNI. La barra queda limpia y enfocada para hacer búsquedas múltiples sin borrar manualmente.</p>
+
+  <form method="post" class="search continuousSearch" id="teacherSearchForm">
+    <input id="teacherSearchInput" name="q" value="" placeholder="DNI del docente" required autofocus autocomplete="off" inputmode="numeric">
+    <input name="note" value="" placeholder="Observación opcional" autocomplete="off">
+    <button>🏫 Consultar y registrar</button>
+  </form>
+
+  {% if q %}
+    <div class="lastSearch">Última búsqueda: <b>{{q}}</b></div>
+    {% if result and result.active %}
+      <div class="result ok"><div class="avatar">🏫</div><div><span class="badge activo">ACTIVO</span><h3>{{result.name}}</h3><p>DNI <b>{{result.dni}}</b> &nbsp; Área <b>{{result.area or '-'}}</b></p></div><small>Ingreso de docente registrado.</small></div>
+    {% else %}
+      <div class="result bad"><div class="avatar red">🏫</div><div><span class="badge inactivo">INACTIVO</span><h3>Docente no activo</h3><p>No figura en la base activa de docentes. El registro igual quedó guardado.</p></div><small>Verificar DNI.</small></div>
+    {% endif %}
+  {% endif %}
+</section>
+<script>
+(function(){
+  const input = document.getElementById('teacherSearchInput');
+  if(input){
+    input.focus();
+    input.select();
+  }
+})();
+</script>
+{% endblock %}
